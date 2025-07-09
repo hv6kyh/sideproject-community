@@ -1,103 +1,153 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+import { useState, useMemo, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { IdeaCard } from '@/components/idea-card';
+import { CategoryTabs } from '@/components/category-tabs';
+import type { Idea, Category, SortOption } from '@/types/idea';
+import { getIdeas, getCategories } from '@/lib/api';
+import { TrendingUp, Clock } from 'lucide-react';
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+export default function HomePage() {
+  const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [sortOption, setSortOption] = useState<SortOption>('latest');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [fetchedIdeas, fetchedCategories] = await Promise.all([
+          getIdeas(),
+          getCategories(),
+        ]);
+        setIdeas(fetchedIdeas);
+        setCategories(fetchedCategories);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+        // You could set an error state here to show an error message to the user
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const filteredAndSortedIdeas = useMemo(() => {
+    let filtered = ideas;
+
+    // 카테고리 필터링
+    if (selectedCategory !== 'all') {
+      const categoryName = categories.find(
+        (cat) => cat.id === selectedCategory
+      )?.name;
+      if (categoryName) {
+        filtered = filtered.filter((idea) =>
+          idea.category.includes(categoryName)
+        );
+      }
+    }
+
+    // 정렬
+    if (sortOption === 'popular') {
+      filtered = [...filtered].sort(
+        (a, b) => b.likes - b.dislikes - (a.likes - a.dislikes)
+      );
+    } else {
+      filtered = [...filtered].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+    }
+
+    return filtered;
+  }, [selectedCategory, sortOption, ideas, categories]);
+
+  if (isLoading) {
+    return (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="text-center mb-12">
+                <h1 className="text-4xl font-bold text-gray-900 mb-4">오늘의 사이드 프로젝트 아이디어</h1>
+                <p className="text-xl text-gray-600 max-w-3xl mx-auto">창의적인 아이디어를 불러오는 중...</p>
+            </div>
+            {/* 스켈레톤 로딩 UI를 여기에 추가할 수 있습니다. */}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* 헤더 섹션 */}
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          오늘의 사이드 프로젝트 아이디어
+        </h1>
+        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          매일 새롭게 수집되는 창의적인 아이디어들을 탐색하고, 마음에 드는
+          프로젝트는 팀을 모집해서 함께 만들어보세요.
+        </p>
+      </div>
+
+      {/* 필터 및 정렬 */}
+      <div className="mb-8 space-y-4">
+        <CategoryTabs
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+        />
+
+        <div className="flex justify-between items-center">
+          <p className="text-sm text-gray-600">
+            총 {filteredAndSortedIdeas.length}개의 아이디어
+          </p>
+
+          <Select
+            value={sortOption}
+            onValueChange={(value: SortOption) => setSortOption(value)}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="latest">
+                <div className="flex items-center">
+                  <Clock className="h-4 w-4 mr-2" />
+                  최신순
+                </div>
+              </SelectItem>
+              <SelectItem value="popular">
+                <div className="flex items-center">
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  인기순
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* 아이디어 그리드 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredAndSortedIdeas.map((idea) => (
+          <IdeaCard key={idea.id} idea={idea} />
+        ))}
+      </div>
+
+      {/* 더 보기 버튼 */}
+      <div className="text-center mt-12">
+        <Button size="lg" variant="outline">
+          더 많은 아이디어 보기
+        </Button>
+      </div>
     </div>
   );
 }
